@@ -23,7 +23,6 @@
     }
   },
   "variables": [
-    { "name": "noVNC Web-Port", "description": "Port des noVNC-Browsers. Muss mit einem zugewiesenen Port im Panel übereinstimmen.", "env_variable": "SERVER_PORT", "default_value": "8080", "user_viewable": true, "user_editable": false, "rules": "required|numeric|between:1,65535", "field_type": "text" },
     { "name": "VNC-Passwort", "description": "Passwort für die VNC / noVNC Verbindung.", "env_variable": "VNC_PASSWORD", "default_value": "black1234", "user_viewable": true, "user_editable": true, "rules": "required|string|min:4|max:64", "field_type": "text" },
     { "name": "RAM (MB)", "description": "Arbeitsspeicher der VM in Megabyte.", "env_variable": "RAM", "default_value": "2048", "user_viewable": true, "user_editable": true, "rules": "required|integer|min:512", "field_type": "text" },
     { "name": "KVM-Beschleunigung", "description": "1 = KVM Hardware-Beschleunigung (schnell).", "env_variable": "USE_KVM", "default_value": "1", "user_viewable": true, "user_editable": true, "rules": "required|in:0,1", "field_type": "text" },

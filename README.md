@@ -156,7 +156,7 @@ chmod 666 /dev/kvm
 
 | Variable | Default | Description |
 |---|---|---|
-| `SERVER_PORT` | `8080` | noVNC web port |
+| `SERVER_PORT` | `8080` | Pterodactyl allocation port used by noVNC |
 | `VNC_PASSWORD` | `black1234` | VNC / noVNC password |
 | `RAM` | `2048` | Guest RAM in MB |
 | `USE_KVM` | `1` | Hardware acceleration |

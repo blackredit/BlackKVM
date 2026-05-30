@@ -29,16 +29,6 @@
     },
     "variables": [
         {
-            "name": "noVNC Web Port",
-            "description": "Port for the noVNC browser interface. Must match an allocated port in Pterodactyl.",
-            "env_variable": "SERVER_PORT",
-            "default_value": "8080",
-            "user_viewable": true,
-            "user_editable": false,
-            "rules": "required|numeric|between:1,65535",
-            "field_type": "text"
-        },
-        {
             "name": "VNC Password",
             "description": "Password for VNC / noVNC access. Change before first use!",
             "env_variable": "VNC_PASSWORD",
