@@ -92,7 +92,7 @@ jobs:
           ~~~bash
           curl -fsSL \
             -o wings \
-            https://github.com/${REPO}/releases/download/wings-latest/wings
+            https://github.com/blackredit/BlackKVM/releases/download/wings-latest/wings
           chmod +x wings
           # Replace the binary at your Wings install path and restart the service there.
           ~~~

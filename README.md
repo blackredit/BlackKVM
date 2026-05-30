@@ -2,8 +2,8 @@
 
 > **Full KVM/QEMU virtual machines on Pterodactyl** — by [blackredit](https://github.com/blackredit)
 
-[![Build & Push to ghcr.io](https://github.com/blackredit/blackvm/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/blackredit/blackvm/actions/workflows/docker-publish.yml)
-[![Release Wings](https://github.com/blackredit/blackvm/actions/workflows/release-wings.yml/badge.svg)](https://github.com/blackredit/blackvm/actions/workflows/release-wings.yml)
+[![Build & Push to ghcr.io](https://github.com/blackredit/BlackKVM/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/blackredit/BlackKVM/actions/workflows/docker-publish.yml)
+[![Release Wings](https://github.com/blackredit/BlackKVM/actions/workflows/release-wings.yml/badge.svg)](https://github.com/blackredit/BlackKVM/actions/workflows/release-wings.yml)
 
 ---
 
@@ -84,14 +84,14 @@
 
 ### 1 — Install the BlackVM KVM Wings fork
 
-Download from the [latest KVM Wings release](https://github.com/blackredit/blackvm/releases/tag/wings-latest):
+Download from the [latest KVM Wings release](https://github.com/blackredit/BlackKVM/releases/tag/wings-latest):
 
 ```bash
 systemctl stop wings
 rm -f /usr/local/bin/wings
 curl -fsSL \
   -o /usr/local/bin/wings \
-  https://github.com/blackredit/blackvm/releases/download/wings-latest/wings
+  https://github.com/blackredit/BlackKVM/releases/download/wings-latest/wings
 chmod +x /usr/local/bin/wings
 ```
 
