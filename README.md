@@ -87,13 +87,12 @@
 Download from the [latest KVM Wings release](https://github.com/blackredit/blackvm/releases/tag/wings-latest):
 
 ```bash
-cd /opt/pterodactyl
 systemctl stop wings
-rm -f wings
+rm -f /usr/local/bin/wings
 curl -fsSL \
-  -o wings \
+  -o /usr/local/bin/wings \
   https://github.com/blackredit/blackvm/releases/download/wings-latest/wings
-chmod +x wings
+chmod +x /usr/local/bin/wings
 ```
 
 `/etc/systemd/system/wings.service`:
@@ -108,7 +107,7 @@ Requires=docker.service
 User=root
 Group=root
 WorkingDirectory=/etc/pterodactyl
-ExecStart=/opt/pterodactyl/wings
+ExecStart=/usr/local/bin/wings
 Restart=on-failure
 RestartSec=5
 LimitNOFILE=4096
