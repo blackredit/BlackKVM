@@ -118,10 +118,10 @@ ok "Handing off to QEMU..."
 echo -e "${CYAN}─────────────────────────────────────────────────────${NC}"
 
 # Convert Pterodactyl {{VARIABLE}} → ${VARIABLE} and eval
-MODIFIED_STARTUP=$(echo "${STARTUP}" | sed -e 's/{{/${/g' -e 's/}}/}/g' -e 's/--enable-kvm/-enable-kvm/g')
+MODIFIED_STARTUP=$(printf '%s' "${STARTUP}" | tr -d '\r' | sed -e 's/{{/${/g' -e 's/}}/}/g' -e 's/--enable-kvm/-enable-kvm/g')
 # Older imported eggs may still render an invalid IDE cache value. Rewrite the
 # exact IDE drive option to a safe cache mode so stale imports still work.
 MODIFIED_STARTUP=$(printf '%s' "$MODIFIED_STARTUP" | perl -0pe 's|-drive file=([^ ]+),format=qcow2,if=ide,index=0,cache=[^ ]+|-drive file=$1,format=qcow2,if=ide,index=0,cache=none|g')
 # Feed the initial monitor commands, then keep stdin open so QEMU does not
 # receive EOF and exit immediately with code 0.
-eval exec ${MODIFIED_STARTUP} < <(cat qemu_cmd.txt; tail -f /dev/null)
+eval "exec ${MODIFIED_STARTUP}" < <(cat qemu_cmd.txt; tail -f /dev/null)
