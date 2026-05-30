@@ -37,7 +37,7 @@
                           ▼
               ┌────────────────────┐
               │  Pterodactyl Egg   │
-              │  (egg-blackvm.json)│
+              │  (image-first)     │
               │                    │
               │  Install script:   │
               │  • qemu-img create │  ← ONLY this, no downloads
@@ -146,9 +146,8 @@ chmod 666 /dev/kvm
 ## 📦 Import the Egg
 
 1. **Admin → Nests → Import Egg**
-2. Upload `egg/egg-blackvm.json`
+2. Upload `egg/egg-blackvm-image-first.json`
 3. Docker image is already set to: `ghcr.io/blackredit/blackvm:latest`
-4. The image-first export is kept in sync, but `egg/egg-blackvm.json` is the canonical import.
 
 ---
 
