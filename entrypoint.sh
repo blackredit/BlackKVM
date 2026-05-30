@@ -76,6 +76,7 @@ if [ -c /dev/kvm ]; then
 else
     warn "/dev/kvm NOT found → KVM disabled, TCG fallback will be used (slow)"
     warn "See README: create /dev/kvm mount in Pterodactyl or set USE_KVM=0"
+    USE_KVM=0
 fi
 
 # ── 4. Status summary ─────────────────────────────────────────────────────────
@@ -117,5 +118,5 @@ ok "Handing off to QEMU..."
 echo -e "${CYAN}─────────────────────────────────────────────────────${NC}"
 
 # Convert Pterodactyl {{VARIABLE}} → ${VARIABLE} and eval
-MODIFIED_STARTUP=$(echo "${STARTUP}" | sed -e 's/{{/${/g' -e 's/}}/}/g')
+MODIFIED_STARTUP=$(echo "${STARTUP}" | sed -e 's/{{/${/g' -e 's/}}/}/g' -e 's/--enable-kvm/-enable-kvm/g')
 eval exec ${MODIFIED_STARTUP} < qemu_cmd.txt
