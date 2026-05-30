@@ -27,7 +27,7 @@ cat << 'BANNER'
  | |_) | | (_| | (__| . \   | | | |  | |
  |____/|_|\__,_|\___|_|\_\  |_| |_|  |_|
 
-  by blackredit  ·  github.com/blackredit/blackvm
+    BlackKVM  ·  by blackredit  ·  github.com/blackredit/blackvm
 BANNER
 echo -e "${NC}"
 
