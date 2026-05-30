@@ -1,21 +1,22 @@
 #!/bin/bash
-# BlackVM – QEMU Monitor Helper  (/scripts/monitor.sh)
-# Voraussetzung: ENABLE_MONITOR_SOCKET=1 (oder EXTRA_ARGS mit -monitor ...)
-SOCK="${MONITOR_SOCKET:-/tmp/blackvm.sock}"
-CMD="${*:-help}"
-C='\033[0;36m'; G='\033[0;32m'; R='\033[0;31m'; N='\033[0m'
-
-if [ ! -S "${SOCK}" ]; then
-    echo -e "${R}[✘] Monitor-Socket nicht gefunden: ${SOCK}${N}"
-    echo -e "${C}Tipp: EXTRA_ARGS auf -monitor unix:${SOCK},server,nowait setzen${N}"
+# BlackVM – QEMU Monitor Helper  |  Usage: bvm-monitor "command"
+# Requires EXTRA_ARGS to contain: -monitor unix:/tmp/bvm.sock,server,nowait
+SOCK="/tmp/bvm.sock"; CMD="${*:-help}"
+RED='\033[0;31m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; NC='\033[0m'
+if [ ! -S "$SOCK" ]; then
+    echo -e "${RED}[✘] No monitor socket at $SOCK${NC}"
+    echo -e "    Add to EXTRA_ARGS: -monitor unix:/tmp/bvm.sock,server,nowait"
     echo ""
-    echo "Nützliche Monitor-Befehle:"
-    echo "  info status          info vnc          info block"
-    echo "  system_powerdown     system_reset       quit"
-    echo "  savevm <name>        loadvm <name>      delvm <name>"
-    echo "  screendump out.ppm   change vnc password"
+    echo -e "${CYAN}Useful commands:${NC}"
+    echo "  info status          – running state"
+    echo "  savevm <name>        – live snapshot (VM running)"
+    echo "  loadvm <name>        – restore live snapshot"
+    echo "  system_powerdown     – ACPI graceful shutdown"
+    echo "  system_reset         – hard reset"
+    echo "  change vnc password  – change VNC password live"
+    echo "  screendump out.png   – screenshot"
+    echo "  quit                 – kill QEMU immediately"
     exit 1
 fi
-
-echo -e "${G}[→]${N} Sende: ${CMD}"
-echo "${CMD}" | socat - UNIX-CONNECT:"${SOCK}"
+echo -e "${GREEN}[→]${NC} ${CMD}"
+echo "$CMD" | socat - UNIX-CONNECT:"$SOCK"

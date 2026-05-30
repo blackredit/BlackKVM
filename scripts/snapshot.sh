@@ -1,35 +1,27 @@
 #!/bin/bash
-# BlackVM – Snapshot Manager  (/scripts/snapshot.sh)
-DISK="${3:-/home/container/disk.qcow2}"
+# BlackVM – Snapshot Manager
+# Usage: bvm-snapshot <list|save|load|delete|info> [name] [disk]
+DISK="${3:-/home/container/${DISK_FILE:-disk.qcow2}}"
 ACTION="${1:-list}"
-NAME="${2:-}"
-C='\033[0;36m'; G='\033[0;32m'; R='\033[0;31m'; Y='\033[1;33m'; N='\033[0m'
+SNAP="${2:-}"
+GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 
 usage() {
-    echo -e "${C}BlackVM Snapshot Manager${N}"
-    echo "  list   [disk]         – alle Snapshots anzeigen"
-    echo "  save   <name> [disk]  – neuen Snapshot erstellen"
-    echo "  load   <name> [disk]  – Snapshot wiederherstellen (VM gestoppt!)"
-    echo "  delete <name> [disk]  – Snapshot löschen"
-    echo "  info         [disk]   – Disk-Infos anzeigen"
-    exit 0
+    echo -e "${CYAN}bvm-snapshot <list|save|load|delete|info> [name] [disk]${NC}"; exit 0
 }
 
-[ ! -f "${DISK}" ] && { echo -e "${R}[✘] Disk nicht gefunden: ${DISK}${N}"; exit 1; }
+[ ! -f "$DISK" ] && { echo -e "${RED}[✘] Disk not found: $DISK${NC}"; exit 1; }
 
-case "${ACTION}" in
-    list)   qemu-img snapshot -l "${DISK}" ;;
-    save)   [ -z "${NAME}" ] && usage
-            echo -e "${Y}[~] Erstelle Snapshot '${NAME}'...${N}"
-            qemu-img snapshot -c "${NAME}" "${DISK}" \
-                && echo -e "${G}[✔] Snapshot '${NAME}' gespeichert${N}" ;;
-    load)   [ -z "${NAME}" ] && usage
-            echo -e "${Y}[~] Stelle Snapshot '${NAME}' wieder her...${N}"
-            qemu-img snapshot -a "${NAME}" "${DISK}" \
-                && echo -e "${G}[✔] Wiederhergestellt – VM neu starten${N}" ;;
-    delete) [ -z "${NAME}" ] && usage
-            qemu-img snapshot -d "${NAME}" "${DISK}" \
-                && echo -e "${G}[✔] Snapshot '${NAME}' gelöscht${N}" ;;
-    info)   qemu-img info "${DISK}" ;;
+case "$ACTION" in
+    list)   echo -e "${CYAN}Snapshots in $DISK:${NC}"; qemu-img snapshot -l "$DISK" ;;
+    save)   [ -z "$SNAP" ] && usage
+            echo -e "${YELLOW}[~] Saving snapshot '$SNAP'...${NC}"
+            qemu-img snapshot -c "$SNAP" "$DISK" && echo -e "${GREEN}[✔] Saved${NC}" ;;
+    load)   [ -z "$SNAP" ] && usage
+            echo -e "${YELLOW}[~] Restoring '$SNAP' – VM must be stopped!${NC}"
+            qemu-img snapshot -a "$SNAP" "$DISK" && echo -e "${GREEN}[✔] Restored – restart the VM${NC}" ;;
+    delete) [ -z "$SNAP" ] && usage
+            qemu-img snapshot -d "$SNAP" "$DISK" && echo -e "${GREEN}[✔] Deleted '$SNAP'${NC}" ;;
+    info)   qemu-img info "$DISK" ;;
     *)      usage ;;
 esac
