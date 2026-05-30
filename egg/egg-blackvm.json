@@ -1,0 +1,312 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-01-01T00:00:00+00:00",
+    "name": "BlackVM",
+    "author": "blackredit@github.com",
+    "description": "BlackVM – Vollständige KVM/QEMU-VMs auf Pterodactyl.\n\nDas Docker-Image (ghcr.io/blackredit/blackvm) enthält bereits:\n  • QEMU/KVM, OVMF (UEFI), SeaBIOS, noVNC\n  • Alle Scripts (Snapshot, Resize, Monitor, Status)\n  • Keine Downloads beim Start nötig\n\nDas Install-Script legt lediglich server-spezifische Dateien an:\n  • QCOW2-Disk (Größe frei wählbar)\n  • Optionale zweite Disk\n  • Boot-ISO herunterladen (netboot.xyz)\n  • VirtIO-Win-ISO herunterladen (für Windows)\n  • VNC-Passwort-Datei\n\nVoraussetzung für KVM: /dev/kvm als Mount im Panel einrichten.\nSiehe README: github.com/blackredit/blackvm",
+    "features": null,
+    "docker_images": {
+        "BlackVM (ghcr.io/blackredit/blackvm:latest)": "ghcr.io/blackredit/blackvm:latest"
+    },
+    "file_denylist": [],
+    "startup": "/bin/bash /entrypoint.sh",
+    "config": {
+        "files": "{}",
+        "startup": "{\n    \"done\": [\n        \"BlackVM  \\u00b7  Konfiguration\",\n        \"Starte QEMU\"\n    ]\n}",
+        "logs": "{}",
+        "stop": "^^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\n# ============================================================\n#  BlackVM – Server-Einrichtung\n#  Das Image ist bereits fertig gebaut (ghcr.io/blackredit/blackvm).\n#  Dieses Script legt NUR server-spezifische Dateien an.\n# ============================================================\nset -e\n\napt-get update -y -qq\napt-get install -y -qq qemu-utils wget curl\n\ncd /mnt/server\n\nDISK_FILE=\"${DISK_FILE:-disk.qcow2}\"\nDISK_SIZE=\"${DISK_SIZE:-100G}\"\nSECONDARY_DISK=\"${SECONDARY_DISK:-}\"\nSECONDARY_DISK_SIZE=\"${SECONDARY_DISK_SIZE:-50G}\"\nVNC_PASSWORD=\"${VNC_PASSWORD:-black1234}\"\n\necho \"\"\necho \"╔══════════════════════════════════════════╗\"\necho \"║     BlackVM  ·  Server-Einrichtung       ║\"\necho \"╚══════════════════════════════════════════╝\"\necho \"\"\n\n# ── Primäre Disk ─────────────────────────────────────────\nif [ ! -f \"${DISK_FILE}\" ]; then\n    echo \"[+] Erstelle primäre Disk: ${DISK_FILE} (${DISK_SIZE})\"\n    qemu-img create -f qcow2 \"${DISK_FILE}\" \"${DISK_SIZE}\"\nelse\n    echo \"[i] Primäre Disk existiert bereits – überspringe\"\nfi\n\n# ── Sekundäre Disk (optional) ────────────────────────────\nif [ -n \"${SECONDARY_DISK}\" ] && [ ! -f \"${SECONDARY_DISK}\" ]; then\n    echo \"[+] Erstelle sekundäre Disk: ${SECONDARY_DISK} (${SECONDARY_DISK_SIZE})\"\n    qemu-img create -f qcow2 \"${SECONDARY_DISK}\" \"${SECONDARY_DISK_SIZE}\"\nfi\n\n# ── netboot.xyz ISO ──────────────────────────────────────\nif [ ! -f \"netboot.xyz.iso\" ]; then\n    echo \"[+] Lade netboot.xyz ISO herunter...\"\n    wget -q --show-progress -O netboot.xyz.iso \\\n        https://boot.netboot.xyz/ipxe/netboot.xyz.iso\nelse\n    echo \"[i] netboot.xyz.iso existiert bereits – überspringe\"\nfi\n\n# ── VirtIO-Win ISO (Windows-Treiber) ─────────────────────\nif [ ! -f \"virtio-win.iso\" ]; then\n    echo \"[+] Lade VirtIO-Win ISO herunter (Windows-Treiber)...\"\n    wget -q --show-progress -O virtio-win.iso \\\n        https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.285-1/virtio-win.iso\nelse\n    echo \"[i] virtio-win.iso existiert bereits – überspringe\"\nfi\n\n# ── VNC-Passwort ─────────────────────────────────────────\necho \"[+] Setze VNC-Passwort...\"\necho 'change vnc password' > qemu_cmd.txt\necho \"${VNC_PASSWORD}\" >> qemu_cmd.txt\nchmod 600 qemu_cmd.txt\n\n# ── Verzeichnisse ────────────────────────────────────────\nmkdir -p shared snapshots tmp\nchmod 777 shared snapshots tmp\n\n# ── Rechte setzen ────────────────────────────────────────\nchmod 666 \"${DISK_FILE}\" netboot.xyz.iso virtio-win.iso qemu_cmd.txt 2>/dev/null || true\n[ -n \"${SECONDARY_DISK}\" ] && chmod 666 \"${SECONDARY_DISK}\" 2>/dev/null || true\n\necho \"\"\necho \"╔══════════════════════════════════════════╗\"\necho \"║  BlackVM Installation abgeschlossen!     ║\"\necho \"╠══════════════════════════════════════════╣\"\necho \"║  Disk     : ${DISK_FILE} (${DISK_SIZE})\"\necho \"║  VNC-PW   : ${VNC_PASSWORD}\"\necho \"║  Boot-ISO : netboot.xyz.iso\"\necho \"║  Hinweis  : /dev/kvm Mount nicht vergessen!\"\necho \"╚══════════════════════════════════════════╝\"",
+            "container": "ghcr.io/pterodactyl/installers:debian",
+            "entrypoint": "/bin/bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "noVNC Web-Port",
+            "description": "Port des noVNC-Browsers. Muss mit einem zugewiesenen Port im Panel übereinstimmen.",
+            "env_variable": "SERVER_PORT",
+            "default_value": "8080",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|numeric|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "VNC-Passwort",
+            "description": "Passwort für die VNC / noVNC Verbindung. Vor dem ersten Start ändern!",
+            "env_variable": "VNC_PASSWORD",
+            "default_value": "black1234",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|min:4|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "RAM (MB)",
+            "description": "Arbeitsspeicher der VM in Megabyte. Linux: mind. 1024 MB. Windows: mind. 4096 MB.",
+            "env_variable": "RAM",
+            "default_value": "2048",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|min:512",
+            "field_type": "text"
+        },
+        {
+            "name": "KVM-Beschleunigung",
+            "description": "1 = KVM Hardware-Beschleunigung (schnell, braucht /dev/kvm Mount). 0 = TCG Software-Emulation (sehr langsam).",
+            "env_variable": "USE_KVM",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:0,1",
+            "field_type": "text"
+        },
+        {
+            "name": "Maschinentyp",
+            "description": "QEMU-Maschinentyp. 'q35' = modern (PCIe, für UEFI empfohlen). 'pc' = Legacy i440fx.",
+            "env_variable": "MACHINE_TYPE",
+            "default_value": "q35",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:q35,pc",
+            "field_type": "text"
+        },
+        {
+            "name": "UEFI-Boot",
+            "description": "1 = UEFI via OVMF (empfohlen für moderne Betriebssysteme). 0 = Legacy BIOS.",
+            "env_variable": "USE_UEFI",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:0,1",
+            "field_type": "text"
+        },
+        {
+            "name": "Primäre Disk",
+            "description": "Dateiname des primären QCOW2-Disk-Images.",
+            "env_variable": "DISK_FILE",
+            "default_value": "disk.qcow2",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "Primäre Disk Größe (nur Installation)",
+            "description": "Größe der primären Disk beim ersten Einrichten. Bestehende Disks werden NICHT verändert. Beispiele: 80G, 200G, 500G.",
+            "env_variable": "DISK_SIZE",
+            "default_value": "100G",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:16",
+            "field_type": "text"
+        },
+        {
+            "name": "Sekundäre Disk (optional)",
+            "description": "Dateiname einer zweiten QCOW2-Disk (immer als VirtIO angebunden). Leer lassen = deaktiviert. Wird beim Einrichten automatisch angelegt falls nicht vorhanden.",
+            "env_variable": "SECONDARY_DISK",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "Sekundäre Disk Größe (nur Installation)",
+            "description": "Größe der zweiten Disk beim Einrichten, falls sie noch nicht existiert.",
+            "env_variable": "SECONDARY_DISK_SIZE",
+            "default_value": "50G",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:16",
+            "field_type": "text"
+        },
+        {
+            "name": "Primäres ISO / CD-ROM",
+            "description": "Boot-ISO Dateiname. Standard: netboot.xyz.iso für Netzwerk-Installation. Leer lassen = nur Disk-Boot.",
+            "env_variable": "ISO_FILE",
+            "default_value": "netboot.xyz.iso",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:255",
+            "field_type": "text"
+        },
+        {
+            "name": "Sekundäres ISO (Treiber)",
+            "description": "Zweites CD-ROM Laufwerk, z.B. 'virtio-win.iso' für Windows VirtIO-Treiberinstallation. Leer lassen = deaktiviert.",
+            "env_variable": "SECONDARY_ISO",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:255",
+            "field_type": "text"
+        },
+        {
+            "name": "VirtIO Disk",
+            "description": "1 = hochperformante VirtIO-Disk (Linux oder nach Treiberinstallation unter Windows). 0 = IDE-Emulation (funktioniert immer, Windows-Installation immer mit 0 starten).",
+            "env_variable": "USE_VIRTIO",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:0,1",
+            "field_type": "text"
+        },
+        {
+            "name": "Disk-Cache-Modus",
+            "description": "QEMU Disk-Cache wenn VirtIO deaktiviert. 'writeback' = schnell. 'writethrough' = sicher. 'none' = best mit VirtIO.",
+            "env_variable": "DISK_CACHE",
+            "default_value": "writeback",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:none,writeback,writethrough,unsafe,directsync",
+            "field_type": "text"
+        },
+        {
+            "name": "VirtIO Netzwerk",
+            "description": "1 = VirtIO NIC (schnell). 0 = Legacy Realtek RTL8139 (funktioniert immer).",
+            "env_variable": "USE_VIRTIO_NET",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:0,1",
+            "field_type": "text"
+        },
+        {
+            "name": "Port-Weiterleitungen",
+            "description": "Ports vom Gast nach außen. Format: hostfwd=tcp::HOST-:GAST (Komma-getrennt). Beispiel: hostfwd=tcp::8080-:80,hostfwd=tcp::2222-:22",
+            "env_variable": "FORWARD_PORTS",
+            "default_value": "hostfwd=tcp::8080-:80,hostfwd=tcp::2222-:22,hostfwd=tcp::3389-:3389",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "CPU Sockets",
+            "description": "Anzahl virtueller CPU-Sockets (normalerweise 1).",
+            "env_variable": "CPU_SOCKETS",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|min:1|max:8",
+            "field_type": "text"
+        },
+        {
+            "name": "CPU Kerne",
+            "description": "Anzahl virtueller CPU-Kerne pro Socket.",
+            "env_variable": "CPU_CORES",
+            "default_value": "2",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|min:1|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "CPU Threads pro Kern",
+            "description": "Threads pro Kern (2 = Hyper-Threading emulieren).",
+            "env_variable": "CPU_THREADS",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|min:1|max:4",
+            "field_type": "text"
+        },
+        {
+            "name": "CPU-Limit (%)",
+            "description": "Maximale Host-CPU-Auslastung durch QEMU in Prozent (0 = unbegrenzt). Verhindert, dass eine VM den gesamten Node blockiert.",
+            "env_variable": "CPU_LIMIT",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|min:0|max:6400",
+            "field_type": "text"
+        },
+        {
+            "name": "Memory Ballooning",
+            "description": "1 = VirtIO-Balloon-Gerät für dynamische RAM-Rückgewinnung. Benötigt Balloon-Treiber im Gast (Linux-Kernel und VirtIO-Win inklusive).",
+            "env_variable": "BALLOON_MEMORY",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:0,1",
+            "field_type": "text"
+        },
+        {
+            "name": "VirtIO GPU",
+            "description": "1 = VirtIO-GPU mit EGL Headless (experimentell, braucht Host-GPU). 0 = Standard VGA.",
+            "env_variable": "USE_GPU",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:0,1",
+            "field_type": "text"
+        },
+        {
+            "name": "Soundkarte",
+            "description": "1 = Intel HDA Soundkarte emulieren. 0 = kein Sound (weniger Overhead).",
+            "env_variable": "SOUND_ENABLED",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:0,1",
+            "field_type": "text"
+        },
+        {
+            "name": "USB 3.0 Controller",
+            "description": "1 = xHCI USB 3.0 Controller + USB-Tablet (empfohlen). 0 = nur Legacy USB-Tablet.",
+            "env_variable": "ENABLE_USB3",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:0,1",
+            "field_type": "text"
+        },
+        {
+            "name": "QEMU Guest Agent",
+            "description": "1 = virtio-serial für QEMU Guest Agent (sauberes Herunterfahren, Dateitransfer). Benötigt qemu-guest-agent im Gast.",
+            "env_variable": "ENABLE_GUEST_AGENT",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:0,1",
+            "field_type": "text"
+        },
+        {
+            "name": "Geteiltes Verzeichnis",
+            "description": "Optionaler Host-Pfad der als FAT32-Laufwerk im Gast erscheint. Leer lassen = deaktiviert. Beispiel: /home/container/shared",
+            "env_variable": "SHARED_DIR",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:255",
+            "field_type": "text"
+        },
+        {
+            "name": "Snapshot beim Start laden",
+            "description": "Name eines QCOW2-Snapshots der beim Start wiederhergestellt werden soll. Leer lassen = normaler Boot. Snapshot vorher mit /scripts/snapshot.sh save erstellen.",
+            "env_variable": "SNAPSHOT_LOAD",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "Zusätzliche QEMU-Argumente",
+            "description": "Rohe QEMU-Argumente die ans Ende des Befehls angehängt werden. Nur für Fortgeschrittene. Beispiel: -monitor unix:/tmp/blackvm.sock,server,nowait",
+            "env_variable": "EXTRA_ARGS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:1024",
+            "field_type": "text"
+        }
+    ]
+}
