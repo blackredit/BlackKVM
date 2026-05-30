@@ -52,6 +52,7 @@ SECONDARY_ISO="${SECONDARY_ISO:-}"
 FORWARD_PORTS="${FORWARD_PORTS:-hostfwd=tcp::8080-:80}"
 USE_VIRTIO="${USE_VIRTIO:-0}"
 USE_VIRTIO_NET="${USE_VIRTIO_NET:-0}"
+LEGACY_NET_MODEL="${LEGACY_NET_MODEL:-rtl8139}"
 USE_GPU="${USE_GPU:-0}"
 SOUND_ENABLED="${SOUND_ENABLED:-0}"
 ENABLE_USB3="${ENABLE_USB3:-1}"
@@ -59,6 +60,17 @@ BALLOON_MEMORY="${BALLOON_MEMORY:-0}"
 ENABLE_GUEST_AGENT="${ENABLE_GUEST_AGENT:-0}"
 SHARED_DIR="${SHARED_DIR:-}"
 SNAPSHOT_LOAD="${SNAPSHOT_LOAD:-}"
+BOOT_ORDER="${BOOT_ORDER:-dc}"
+CPU_MODEL="${CPU_MODEL:-host}"
+RTC_BASE="${RTC_BASE:-utc}"
+KVM_STRICT="${KVM_STRICT:-0}"
+AUTO_FETCH_ISO="${AUTO_FETCH_ISO:-0}"
+ISO_URL="${ISO_URL:-}"
+SECONDARY_ISO_URL="${SECONDARY_ISO_URL:-}"
+MONITOR_SOCKET="${MONITOR_SOCKET:-/tmp/blackvm.sock}"
+ENABLE_MONITOR_SOCKET="${ENABLE_MONITOR_SOCKET:-0}"
+ENABLE_QMP="${ENABLE_QMP:-0}"
+QMP_SOCKET="${QMP_SOCKET:-/tmp/blackvm-qmp.sock}"
 EXTRA_ARGS="${EXTRA_ARGS:-}"
 
 FIRMWARE_DIR="/opt/blackvm/firmware"
@@ -73,9 +85,15 @@ if [ "${USE_KVM}" = "1" ]; then
     if [ -c /dev/kvm ]; then
         ok "KVM aktiv – Hardware-Beschleunigung verfügbar"
     else
-        warn "/dev/kvm nicht gefunden – falle auf TCG-Emulation zurück (langsam!)"
-        warn "Bitte /dev/kvm als Mount in Pterodactyl einrichten (siehe README)"
-        USE_KVM="0"
+        if [ "${KVM_STRICT}" = "1" ]; then
+            err "/dev/kvm nicht gefunden und KVM_STRICT=1 gesetzt – Abbruch"
+            err "Bitte /dev/kvm als Mount einrichten oder KVM_STRICT=0 setzen"
+            exit 1
+        else
+            warn "/dev/kvm nicht gefunden – falle auf TCG-Emulation zurück (langsam!)"
+            warn "Bitte /dev/kvm als Mount in Pterodactyl einrichten (siehe README)"
+            USE_KVM="0"
+        fi
     fi
 fi
 
@@ -90,6 +108,18 @@ if [ -n "${SECONDARY_DISK}" ] && [ ! -f "${SECONDARY_DISK}" ]; then
     qemu-img create -f qcow2 "${SECONDARY_DISK}" 50G
 fi
 
+# ── Optionaler ISO-Autofetch ─────────────────────────────────────────────────
+if [ "${AUTO_FETCH_ISO}" = "1" ]; then
+    if [ -n "${ISO_URL}" ] && [ -n "${ISO_FILE}" ] && [ ! -f "${ISO_FILE}" ]; then
+        info "Lade primäres ISO von ISO_URL herunter..."
+        curl -fL --retry 3 --retry-delay 2 -o "${ISO_FILE}" "${ISO_URL}"
+    fi
+    if [ -n "${SECONDARY_ISO_URL}" ] && [ -n "${SECONDARY_ISO}" ] && [ ! -f "${SECONDARY_ISO}" ]; then
+        info "Lade sekundäres ISO von SECONDARY_ISO_URL herunter..."
+        curl -fL --retry 3 --retry-delay 2 -o "${SECONDARY_ISO}" "${SECONDARY_ISO_URL}"
+    fi
+fi
+
 # ── VNC-Passwort-Datei ────────────────────────────────────────────────────────
 info "Schreibe VNC-Passwort..."
 { echo "change vnc password"; echo "${VNC_PASSWORD}"; } > qemu_cmd.txt
@@ -101,9 +131,13 @@ Q="qemu-system-x86_64"
 
 # Maschine + Beschleunigung
 if [ "${USE_KVM}" = "1" ]; then
-    Q+=" -machine ${MACHINE_TYPE},accel=kvm -cpu host"
+    Q+=" -machine ${MACHINE_TYPE},accel=kvm -cpu ${CPU_MODEL}"
 else
-    Q+=" -machine ${MACHINE_TYPE},accel=tcg -cpu max"
+    if [ "${CPU_MODEL}" = "host" ]; then
+        Q+=" -machine ${MACHINE_TYPE},accel=tcg -cpu max"
+    else
+        Q+=" -machine ${MACHINE_TYPE},accel=tcg -cpu ${CPU_MODEL}"
+    fi
     Q+=" -accel tcg,thread=multi,tb-size=128,split-wx=on"
 fi
 
@@ -113,6 +147,7 @@ Q+=" -smp sockets=${CPU_SOCKETS},cores=${CPU_CORES},threads=${CPU_THREADS}"
 # RAM
 Q+=" -m ${RAM}"
 [ "${BALLOON_MEMORY}" = "1" ] && Q+=" -device virtio-balloon-pci"
+Q+=" -rtc base=${RTC_BASE},clock=host"
 
 # Firmware (OVMF / BIOS – bereits im Image unter /opt/blackvm/firmware/)
 if [ "${USE_UEFI}" = "1" ]; then
@@ -147,7 +182,7 @@ fi
 if [ "${USE_VIRTIO_NET}" = "1" ]; then
     Q+=" -device virtio-net-pci,netdev=n0 -netdev user,id=n0,${FORWARD_PORTS}"
 else
-    Q+=" -net nic -net user,${FORWARD_PORTS}"
+    Q+=" -device ${LEGACY_NET_MODEL},netdev=n0 -netdev user,id=n0,${FORWARD_PORTS}"
 fi
 
 # Anzeige / GPU
@@ -178,9 +213,17 @@ fi
 [ -n "${SNAPSHOT_LOAD}" ] && Q+=" -loadvm ${SNAPSHOT_LOAD}"
 
 # Boot-Reihenfolge + VNC + Monitor
-Q+=" -boot order=dc,menu=on,splash-time=3000"
+Q+=" -boot order=${BOOT_ORDER},menu=on,splash-time=3000"
 Q+=" -vnc 0.0.0.0:${VNC_DISPLAY},password=on"
 Q+=" -monitor stdio"
+
+if [ "${ENABLE_MONITOR_SOCKET}" = "1" ]; then
+    Q+=" -monitor unix:${MONITOR_SOCKET},server,nowait"
+fi
+
+if [ "${ENABLE_QMP}" = "1" ]; then
+    Q+=" -qmp unix:${QMP_SOCKET},server,wait=off"
+fi
 
 # Zusätzliche Argumente (EXTRA_ARGS)
 [ -n "${EXTRA_ARGS}" ] && Q+=" ${EXTRA_ARGS}"
@@ -199,8 +242,10 @@ printf "${CYAN}║${NC}  %-22s %-28s${CYAN}║${NC}\n" "Primäre Disk:"    "${DI
 printf "${CYAN}║${NC}  %-22s %-28s${CYAN}║${NC}\n" "ISO:"             "${ISO_FILE:-keins}"
 printf "${CYAN}║${NC}  %-22s %-28s${CYAN}║${NC}\n" "VirtIO Disk:"     "$([ "${USE_VIRTIO}" = "1" ] && echo "ja" || echo "nein")"
 printf "${CYAN}║${NC}  %-22s %-28s${CYAN}║${NC}\n" "VirtIO Netzwerk:" "$([ "${USE_VIRTIO_NET}" = "1" ] && echo "ja" || echo "nein")"
+printf "${CYAN}║${NC}  %-22s %-28s${CYAN}║${NC}\n" "CPU Modell:"      "${CPU_MODEL}"
+printf "${CYAN}║${NC}  %-22s %-28s${CYAN}║${NC}\n" "Boot-Reihenfolge:" "${BOOT_ORDER}"
 printf "${CYAN}║${NC}  %-22s %-28s${CYAN}║${NC}\n" "noVNC Port:"      "${SERVER_PORT}"
-printf "${CYAN}║${NC}  %-22s %-28s${CYAN}║${NC}\n" "VNC Intern:"      "59${VNC_DISPLAY}${VNC_DISPLAY}"
+printf "${CYAN}║${NC}  %-22s %-28s${CYAN}║${NC}\n" "VNC Intern:"      "${VNC_PORT}"
 echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════════╝${NC}"
 echo ""
 

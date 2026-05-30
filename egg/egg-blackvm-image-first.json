@@ -1,0 +1,52 @@
+{
+  "_comment": "Image-first Egg für BlackVM: Das Image enthält alle Binaries, dieses Egg erstellt nur server-spezifische Dateien.",
+  "meta": { "version": "PTDL_v2", "update_url": null },
+  "exported_at": "2026-05-30T00:00:00+00:00",
+  "name": "BlackVM (image-first)",
+  "author": "blackredit@github.com",
+  "description": "BlackVM (image-first) – Das Docker-Image (ghcr.io/blackredit/blackvm) enthält QEMU/KVM, OVMF/BIOS, noVNC und Helper-Skripte. Dieses Egg legt nur server-spezifische Dateien (Disks, optionale ISOs, VNC-PW) an. /dev/kvm als Mount im Panel einrichten.",
+  "features": null,
+  "docker_images": {
+    "BlackVM (ghcr.io/blackredit/blackvm:latest)": "ghcr.io/blackredit/blackvm:latest"
+  },
+  "file_denylist": [],
+  "startup": "/bin/bash /entrypoint.sh",
+  "config": {
+    "files": "{}",
+    "startup": "{\n    \"done\": [\n        \"BlackVM  ·  Konfiguration\",\n        \"Starte QEMU\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "^^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\nset -euo pipefail\n\n# Minimaler image-first Installations-Script: legt Disks an und lädt optional ISOs\napt-get update -y -qq\napt-get install -y -qq qemu-utils wget curl ca-certificates || true\n\ncd /mnt/server || mkdir -p /mnt/server && cd /mnt/server\n\nDISK_FILE=\"${DISK_FILE:-disk.qcow2}\"\nDISK_SIZE=\"${DISK_SIZE:-100G}\"\nSECONDARY_DISK=\"${SECONDARY_DISK:-}\"\nSECONDARY_DISK_SIZE=\"${SECONDARY_DISK_SIZE:-50G}\"\nISO_FILE=\"${ISO_FILE:-netboot.xyz.iso}\"\nSECONDARY_ISO=\"${SECONDARY_ISO:-virtio-win.iso}\"\nAUTO_FETCH_ISO=\"${AUTO_FETCH_ISO:-0}\"\nISO_URL=\"${ISO_URL:-}\"\nSECONDARY_ISO_URL=\"${SECONDARY_ISO_URL:-}\"\nVNC_PASSWORD=\"${VNC_PASSWORD:-black1234}\"\n\necho \"[BlackVM] Server setup started\"\n\nif [ ! -f \"${DISK_FILE}\" ]; then\n  echo \"[BlackVM] Create primary disk: ${DISK_FILE} (${DISK_SIZE})\"\n  qemu-img create -f qcow2 \"${DISK_FILE}\" \"${DISK_SIZE}\"\nelse\n  echo \"[BlackVM] Primary disk exists, skip\"\nfi\n\nif [ -n \"${SECONDARY_DISK}\" ] && [ ! -f \"${SECONDARY_DISK}\" ]; then\n  echo \"[BlackVM] Create secondary disk: ${SECONDARY_DISK} (${SECONDARY_DISK_SIZE})\"\n  qemu-img create -f qcow2 \"${SECONDARY_DISK}\" \"${SECONDARY_DISK_SIZE}\"\nfi\n\nif [ \"${AUTO_FETCH_ISO}\" = \"1\" ]; then\n  if [ -n \"${ISO_URL}\" ] && [ -n \"${ISO_FILE}\" ] && [ ! -f \"${ISO_FILE}\" ]; then\n    echo \"[BlackVM] Download primary ISO from ISO_URL\"\n    curl -fL --retry 3 --retry-delay 2 -o \"${ISO_FILE}\" \"${ISO_URL}\"\n  fi\n  if [ -n \"${SECONDARY_ISO_URL}\" ] && [ -n \"${SECONDARY_ISO}\" ] && [ ! -f \"${SECONDARY_ISO}\" ]; then\n    echo \"[BlackVM] Download secondary ISO from SECONDARY_ISO_URL\"\n    curl -fL --retry 3 --retry-delay 2 -o \"${SECONDARY_ISO}\" \"${SECONDARY_ISO_URL}\"\n  fi\n  if [ -z \"${ISO_URL}\" ] && [ ! -f \"netboot.xyz.iso\" ]; then\n    echo \"[BlackVM] ISO_URL empty, fallback to netboot.xyz.iso\"\n    wget -q --show-progress -O netboot.xyz.iso https://boot.netboot.xyz/ipxe/netboot.xyz.iso\n  fi\n  if [ -z \"${SECONDARY_ISO_URL}\" ] && [ ! -f \"virtio-win.iso\" ]; then\n    echo \"[BlackVM] SECONDARY_ISO_URL empty, fallback to virtio-win.iso\"\n    wget -q --show-progress -O virtio-win.iso https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso\n  fi\nfi\n\n# Write VNC password file if provided\necho \"${VNC_PASSWORD}\" > .vnc_pass && chmod 600 .vnc_pass || true\n\necho \"[BlackVM] Setup complete\"\n"
+    }
+  },
+  "variables": [
+    { "name": "noVNC Web-Port", "description": "Port des noVNC-Browsers. Muss mit einem zugewiesenen Port im Panel übereinstimmen.", "env_variable": "SERVER_PORT", "default_value": "8080", "user_viewable": true, "user_editable": false, "rules": "required|numeric|between:1,65535", "field_type": "text" },
+    { "name": "VNC-Passwort", "description": "Passwort für die VNC / noVNC Verbindung.", "env_variable": "VNC_PASSWORD", "default_value": "black1234", "user_viewable": true, "user_editable": true, "rules": "required|string|min:4|max:64", "field_type": "text" },
+    { "name": "RAM (MB)", "description": "Arbeitsspeicher der VM in Megabyte.", "env_variable": "RAM", "default_value": "2048", "user_viewable": true, "user_editable": true, "rules": "required|integer|min:512", "field_type": "text" },
+    { "name": "KVM-Beschleunigung", "description": "1 = KVM Hardware-Beschleunigung (schnell).", "env_variable": "USE_KVM", "default_value": "1", "user_viewable": true, "user_editable": true, "rules": "required|in:0,1", "field_type": "text" },
+    { "name": "Maschinentyp", "description": "QEMU-Maschinentyp.", "env_variable": "MACHINE_TYPE", "default_value": "q35", "user_viewable": true, "user_editable": true, "rules": "required|in:q35,pc", "field_type": "text" },
+    { "name": "UEFI-Boot", "description": "1 = UEFI via OVMF.", "env_variable": "USE_UEFI", "default_value": "1", "user_viewable": true, "user_editable": true, "rules": "required|in:0,1", "field_type": "text" },
+    { "name": "Primäre Disk", "description": "Dateiname des primären QCOW2-Disk-Images.", "env_variable": "DISK_FILE", "default_value": "disk.qcow2", "user_viewable": true, "user_editable": true, "rules": "required|string|max:64", "field_type": "text" },
+    { "name": "Primäre Disk Größe (nur Installation)", "description": "Größe der primären Disk beim ersten Einrichten.", "env_variable": "DISK_SIZE", "default_value": "100G", "user_viewable": true, "user_editable": true, "rules": "required|string|max:16", "field_type": "text" },
+    { "name": "Sekundäre Disk (optional)", "description": "Dateiname einer zweiten QCOW2-Disk (optional).", "env_variable": "SECONDARY_DISK", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "nullable|string|max:64", "field_type": "text" },
+    { "name": "Sekundäre Disk Größe (nur Installation)", "description": "Größe der zweiten Disk beim Einrichten.", "env_variable": "SECONDARY_DISK_SIZE", "default_value": "50G", "user_viewable": true, "user_editable": true, "rules": "nullable|string|max:16", "field_type": "text" },
+    { "name": "Primäres ISO / CD-ROM", "description": "Boot-ISO Dateiname.", "env_variable": "ISO_FILE", "default_value": "netboot.xyz.iso", "user_viewable": true, "user_editable": true, "rules": "nullable|string|max:255", "field_type": "text" },
+    { "name": "Sekundäres ISO (Treiber)", "description": "Zweites CD-ROM Laufwerk, z.B. virtio-win.iso.", "env_variable": "SECONDARY_ISO", "default_value": "virtio-win.iso", "user_viewable": true, "user_editable": true, "rules": "nullable|string|max:255", "field_type": "text" },
+
+    { "name": "KVM Strict Mode", "description": "1 = Abbruch wenn /dev/kvm fehlt. 0 = TCG-Fallback.", "env_variable": "KVM_STRICT", "default_value": "0", "user_viewable": true, "user_editable": true, "rules": "required|in:0,1", "field_type": "text" },
+    { "name": "CPU Model", "description": "QEMU CPU-Modell (z.B. host).", "env_variable": "CPU_MODEL", "default_value": "host", "user_viewable": true, "user_editable": true, "rules": "required|string|max:64", "field_type": "text" },
+    { "name": "Legacy NIC Modell", "description": "NIC-Modell wenn USE_VIRTIO_NET=0.", "env_variable": "LEGACY_NET_MODEL", "default_value": "rtl8139", "user_viewable": true, "user_editable": true, "rules": "required|string|max:64", "field_type": "text" },
+    { "name": "Boot Reihenfolge", "description": "QEMU boot order, z.B. dc.", "env_variable": "BOOT_ORDER", "default_value": "dc", "user_viewable": true, "user_editable": true, "rules": "required|string|max:8", "field_type": "text" },
+    { "name": "RTC Base", "description": "RTC-Basis: utc oder localtime.", "env_variable": "RTC_BASE", "default_value": "utc", "user_viewable": true, "user_editable": true, "rules": "required|in:utc,localtime", "field_type": "text" },
+    { "name": "ISO Auto Fetch", "description": "1 = ISOs automatisch laden wenn AUTO_FETCH_ISO=1.", "env_variable": "AUTO_FETCH_ISO", "default_value": "0", "user_viewable": true, "user_editable": true, "rules": "required|in:0,1", "field_type": "text" },
+    { "name": "Primary ISO URL", "description": "Direkte URL fuer ISO_FILE.", "env_variable": "ISO_URL", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "nullable|string|max:1024", "field_type": "text" },
+    { "name": "Secondary ISO URL", "description": "Direkte URL fuer SECONDARY_ISO.", "env_variable": "SECONDARY_ISO_URL", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "nullable|string|max:1024", "field_type": "text" },
+    { "name": "Enable Monitor Socket", "description": "1 = zusätzlichen QEMU Monitor Socket aktivieren.", "env_variable": "ENABLE_MONITOR_SOCKET", "default_value": "0", "user_viewable": true, "user_editable": true, "rules": "required|in:0,1", "field_type": "text" },
+    { "name": "Monitor Socket Path", "description": "Pfad fuer den QEMU Monitor Socket.", "env_variable": "MONITOR_SOCKET", "default_value": "/tmp/blackvm.sock", "user_viewable": true, "user_editable": true, "rules": "required|string|max:255", "field_type": "text" },
+    { "name": "Enable QMP Socket", "description": "1 = QMP Socket fuer externe Automatisierung aktivieren.", "env_variable": "ENABLE_QMP", "default_value": "0", "user_viewable": true, "user_editable": true, "rules": "required|in:0,1", "field_type": "text" },
+    { "name": "QMP Socket Path", "description": "Pfad fuer den QMP Socket.", "env_variable": "QMP_SOCKET", "default_value": "/tmp/blackvm-qmp.sock", "user_viewable": true, "user_editable": true, "rules": "required|string|max:255", "field_type": "text" }
+  ]
+}

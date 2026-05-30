@@ -1,7 +1,7 @@
 #!/bin/bash
 # BlackVM – QEMU Monitor Helper  (/scripts/monitor.sh)
-# Voraussetzung: EXTRA_ARGS=-monitor unix:/tmp/blackvm.sock,server,nowait
-SOCK="/tmp/blackvm.sock"
+# Voraussetzung: ENABLE_MONITOR_SOCKET=1 (oder EXTRA_ARGS mit -monitor ...)
+SOCK="${MONITOR_SOCKET:-/tmp/blackvm.sock}"
 CMD="${*:-help}"
 C='\033[0;36m'; G='\033[0;32m'; R='\033[0;31m'; N='\033[0m'
 
