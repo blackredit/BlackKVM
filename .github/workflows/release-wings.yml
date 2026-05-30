@@ -89,24 +89,21 @@ jobs:
 
           ### Quick Install
 
-          ```bash
-          cd /opt/pterodactyl
-          systemctl stop wings
-          rm -f wings
+          ~~~bash
           curl -fsSL \
             -o wings \
             https://github.com/${REPO}/releases/download/wings-latest/wings
           chmod +x wings
-          systemctl restart wings
-          ```
+          # Replace the binary at your Wings install path and restart the service there.
+          ~~~
 
           ### SHA-256 Checksum
 
-          ```
+          ~~~
           EOF
           cat wings.sha256 >> release-notes.md
           cat >> release-notes.md <<EOF
-          ```
+          ~~~
 
           > ⚠️ Ensure `/dev/kvm` is available on your node before use.
           > See the [README](https://github.com/${REPO}#-node-setup) for full setup instructions.
