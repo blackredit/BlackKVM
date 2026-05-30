@@ -119,4 +119,6 @@ echo -e "${CYAN}─────────────────────�
 
 # Convert Pterodactyl {{VARIABLE}} → ${VARIABLE} and eval
 MODIFIED_STARTUP=$(echo "${STARTUP}" | sed -e 's/{{/${/g' -e 's/}}/}/g' -e 's/--enable-kvm/-enable-kvm/g')
-eval exec ${MODIFIED_STARTUP} < qemu_cmd.txt
+# Feed the initial monitor commands, then keep stdin open so QEMU does not
+# receive EOF and exit immediately with code 0.
+eval exec ${MODIFIED_STARTUP} < <(cat qemu_cmd.txt; tail -f /dev/null)

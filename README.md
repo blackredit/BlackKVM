@@ -148,6 +148,7 @@ chmod 666 /dev/kvm
 1. **Admin → Nests → Import Egg**
 2. Upload `egg/egg-blackvm.json`
 3. Docker image is already set to: `ghcr.io/blackredit/blackvm:latest`
+4. The image-first export is kept in sync, but `egg/egg-blackvm.json` is the canonical import.
 
 ---
 
