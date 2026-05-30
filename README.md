@@ -82,9 +82,9 @@
 
 ## 🛠 Node Setup
 
-### 1 — Install the patched Wings binary
+### 1 — Install the BlackVM KVM Wings fork
 
-Download from the [latest Wings release](https://github.com/blackredit/blackvm/releases/tag/wings-latest):
+Download from the [latest KVM Wings release](https://github.com/blackredit/blackvm/releases/tag/wings-latest):
 
 ```bash
 cd /opt/pterodactyl
@@ -100,7 +100,7 @@ chmod +x wings
 
 ```ini
 [Unit]
-Description=Pterodactyl Wings Daemon (BlackVM)
+Description=Pterodactyl Wings Daemon (BlackVM KVM Fork)
 After=docker.service
 Requires=docker.service
 

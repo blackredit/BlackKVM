@@ -1,0 +1,120 @@
+name: Release Wings Binary
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/release-wings.yml"   # re-release when this file changes
+  workflow_dispatch:                              # trigger manually from Actions tab
+  schedule:
+    - cron: "0 3 * * 1"                         # weekly refresh every Monday 03:00 UTC
+
+jobs:
+  release-wings:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.11"
+
+      - name: Clone Wings source
+        run: |
+          git clone --depth 1 https://github.com/pterodactyl/wings.git wings-src
+
+      - name: Apply BlackVM KVM patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('wings-src/cmd/root.go')
+          content = path.read_text()
+
+          if 'func validateKVMHost()' not in content:
+              anchor = '\nfunc initConfig() {'
+              injection = '\n\nfunc validateKVMHost() {\n\tif _, err := os.Stat("/dev/kvm"); err != nil {\n\t\tlog2.Fatalf("BlackVM Wings fork requires /dev/kvm on the host node; enable nested virtualization and mount /dev/kvm in Pterodactyl")\n\t}\n}\n'
+              if anchor not in content:
+                  raise SystemExit('initConfig anchor not found in cmd/root.go')
+              content = content.replace(anchor, injection + anchor, 1)
+
+          pre_run_anchor = '\t\tinitLogging()\n'
+          if 'validateKVMHost()' not in content:
+              if pre_run_anchor not in content:
+                  raise SystemExit('initLogging anchor not found in cmd/root.go')
+              content = content.replace(pre_run_anchor, pre_run_anchor + '\t\tvalidateKVMHost()\n', 1)
+
+          path.write_text(content)
+          PY
+
+      - name: Build Wings binary
+        run: |
+          cd wings-src
+          WINGS_VERSION="$(git rev-parse --short HEAD)-blackkvm"
+          echo "[+] Building BlackVM Wings fork at ${WINGS_VERSION}..."
+          go build \
+            -trimpath \
+            -ldflags="-s -w -X github.com/pterodactyl/wings/system.Version=${WINGS_VERSION}" \
+            -o ../wings \
+            ./wings.go
+          chmod +x ../wings
+          file ../wings
+          sha256sum ../wings | tee ../wings.sha256
+
+      # ── Delete old wings-latest release (idempotent) ──────────────────────
+      - name: Delete existing wings-latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete wings-latest --yes --repo "${{ github.repository }}" 2>/dev/null || true
+          git push origin :refs/tags/wings-latest 2>/dev/null || true
+
+      # ── Publish wings-latest release ──────────────────────────────────────
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          cat > release-notes.md <<EOF
+          ## BlackVM KVM Wings Fork
+
+          This is the **Wings daemon built from source** for BlackVM servers.
+          It includes a KVM host validation patch and will abort startup if /dev/kvm
+          is not available on the node.
+
+          ### Quick Install
+
+          ```bash
+          cd /opt/pterodactyl
+          systemctl stop wings
+          rm -f wings
+          curl -fsSL \
+            -o wings \
+            https://github.com/${REPO}/releases/download/wings-latest/wings
+          chmod +x wings
+          systemctl restart wings
+          ```
+
+          ### SHA-256 Checksum
+
+          ```
+          EOF
+          cat wings.sha256 >> release-notes.md
+          cat >> release-notes.md <<EOF
+          ```
+
+          > ⚠️ Ensure `/dev/kvm` is available on your node before use.
+          > See the [README](https://github.com/${REPO}#-node-setup) for full setup instructions.
+          EOF
+          gh release create wings-latest \
+            --repo "$REPO" \
+            --title "BlackVM KVM Wings Fork" \
+            --prerelease \
+            --notes-file release-notes.md \
+            wings \
+            wings.sha256
