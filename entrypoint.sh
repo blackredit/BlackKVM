@@ -117,14 +117,15 @@ fi
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  3. KVM check
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-if [ "${USE_KVM}" = "1" ]; then
-    if [ -c /dev/kvm ]; then
-        ok "/dev/kvm present → hardware acceleration enabled"
-    else
-        warn "/dev/kvm NOT found → falling back to TCG software emulation (slow)"
-        warn "Mount /dev/kvm on this node or set USE_KVM=0 to suppress this warning"
-        USE_KVM="0"
-    fi
+# ── Machine & acceleration ───────────────────────────────────────────────────
+if [ "${USE_KVM}" = "1" ] && [ -c /dev/kvm ]; then
+    QEMU+=( -enable-kvm
+            -machine "${MACHINE_TYPE}"
+            -cpu host )
+else
+    QEMU+=( -machine "${MACHINE_TYPE}"
+            -cpu max
+            -accel tcg,thread=multi,tb-size=128,split-wx=on )
 fi
 
 info "Checking KVM access..."
