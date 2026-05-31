@@ -2,8 +2,8 @@
 
 > **Full KVM/QEMU virtual machines on Pterodactyl** — by [blackredit](https://github.com/blackredit)
 
-[![Build & Push to ghcr.io](https://github.com/blackredit/BlackKVM/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/blackredit/BlackKVM/actions/workflows/docker-publish.yml)
-[![Release Wings](https://github.com/blackredit/BlackKVM/actions/workflows/release-wings.yml/badge.svg)](https://github.com/blackredit/BlackKVM/actions/workflows/release-wings.yml)
+[![Build & Push to ghcr.io](https://github.com/blackredit/blackvm/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/blackredit/blackvm/actions/workflows/docker-publish.yml)
+[![Release Wings](https://github.com/blackredit/blackvm/actions/workflows/release-wings.yml/badge.svg)](https://github.com/blackredit/blackvm/actions/workflows/release-wings.yml)
 
 ---
 
@@ -37,7 +37,7 @@
                           ▼
               ┌────────────────────┐
               │  Pterodactyl Egg   │
-              │  (image-first)     │
+              │  (egg-blackvm.json)│
               │                    │
               │  Install script:   │
               │  • qemu-img create │  ← ONLY this, no downloads
@@ -82,24 +82,25 @@
 
 ## 🛠 Node Setup
 
-### 1 — Install the BlackVM KVM Wings fork
+### 1 — Install the patched Wings binary
 
-Download from the [latest KVM Wings release](https://github.com/blackredit/BlackKVM/releases/tag/wings-latest):
+Download from the [latest Wings release](https://github.com/blackredit/blackvm/releases/tag/wings-latest):
 
 ```bash
+cd /opt/pterodactyl
 systemctl stop wings
-rm -f /usr/local/bin/wings
+rm -f wings
 curl -fsSL \
-  -o /usr/local/bin/wings \
-  https://github.com/blackredit/BlackKVM/releases/download/wings-latest/wings
-chmod +x /usr/local/bin/wings
+  -o wings \
+  https://github.com/blackredit/blackvm/releases/download/wings-latest/wings
+chmod +x wings
 ```
 
 `/etc/systemd/system/wings.service`:
 
 ```ini
 [Unit]
-Description=Pterodactyl Wings Daemon (BlackVM KVM Fork)
+Description=Pterodactyl Wings Daemon (BlackVM)
 After=docker.service
 Requires=docker.service
 
@@ -107,7 +108,7 @@ Requires=docker.service
 User=root
 Group=root
 WorkingDirectory=/etc/pterodactyl
-ExecStart=/usr/local/bin/wings
+ExecStart=/opt/pterodactyl/wings
 Restart=on-failure
 RestartSec=5
 LimitNOFILE=4096
@@ -146,7 +147,7 @@ chmod 666 /dev/kvm
 ## 📦 Import the Egg
 
 1. **Admin → Nests → Import Egg**
-2. Upload `egg/egg-blackvm-image-first.json`
+2. Upload `egg/egg-blackvm.json`
 3. Docker image is already set to: `ghcr.io/blackredit/blackvm:latest`
 
 ---
@@ -155,7 +156,7 @@ chmod 666 /dev/kvm
 
 | Variable | Default | Description |
 |---|---|---|
-| `SERVER_PORT` | `8080` | Pterodactyl allocation port used by noVNC |
+| `SERVER_PORT` | `8080` | noVNC web port |
 | `VNC_PASSWORD` | `black1234` | VNC / noVNC password |
 | `RAM` | `2048` | Guest RAM in MB |
 | `USE_KVM` | `1` | Hardware acceleration |

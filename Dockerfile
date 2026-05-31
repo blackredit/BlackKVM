@@ -49,6 +49,7 @@ RUN git clone --depth 1 https://github.com/novnc/noVNC         /opt/novnc \
 #     entrypoint.sh copies them to /home/container/ on first boot.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 RUN mkdir -p /opt/blackvm/firmware /opt/blackvm/iso \
+    # ── OVMF (UEFI firmware) – installed via apt, just copy it ──────────────
  && OVMF_SRC="$(find /usr/share -name 'OVMF.fd' 2>/dev/null | head -1)" \
  && if [ -n "$OVMF_SRC" ]; then \
         cp "$OVMF_SRC" /opt/blackvm/firmware/OVMF.fd; \
@@ -57,7 +58,8 @@ RUN mkdir -p /opt/blackvm/firmware /opt/blackvm/iso \
         wget -q -O /opt/blackvm/firmware/OVMF.fd \
             "https://github.com/blackredit/blackvm/releases/download/assets/OVMF.fd"; \
     fi \
- && BIOS_SRC="$(find /usr/share -name 'bios.bin' 2>/dev/null | head -1)" \
+    # ── Legacy BIOS – bundled with qemu-system-x86 ──────────────────────────
+ && BIOS_SRC="$(find /usr/share/qemu -name 'bios.bin' 2>/dev/null | head -1)" \
  && if [ -n "$BIOS_SRC" ]; then \
         cp "$BIOS_SRC" /opt/blackvm/firmware/bios.bin; \
     else \
@@ -65,9 +67,11 @@ RUN mkdir -p /opt/blackvm/firmware /opt/blackvm/iso \
         wget -q -O /opt/blackvm/firmware/bios.bin \
             "https://github.com/blackredit/blackvm/releases/download/assets/bios.bin"; \
     fi \
+    # ── netboot.xyz (network OS installer) ──────────────────────────────────
  && wget -q --show-progress \
         -O /opt/blackvm/iso/netboot.xyz.iso \
         "https://boot.netboot.xyz/ipxe/netboot.xyz.iso" \
+    # ── VirtIO drivers for Windows ──────────────────────────────────────────
  && wget -q --show-progress \
         -O /opt/blackvm/iso/virtio-win.iso \
         "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.285-1/virtio-win.iso" \
