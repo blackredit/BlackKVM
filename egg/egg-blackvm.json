@@ -7,7 +7,7 @@
   "exported_at": "2026-01-01T00:00:00+00:00",
   "name": "BlackVM",
   "author": "blackredit@github.com",
-  "description": "BlackVM – Run full KVM/QEMU virtual machines on Pterodactyl.\n\nThe Docker image (ghcr.io/blackredit/blackvm) already contains:\n• QEMU system x86_64\n• OVMF (UEFI firmware)\n• Legacy BIOS\n• netboot.xyz ISO (network installer)\n• VirtIO-Win ISO (Windows drivers)\n• noVNC browser remote desktop\n• All helper scripts (bvm-snapshot, bvm-resize, bvm-monitor, bvm-status)\n\nThe installation script ONLY creates the disk image and VNC password file.\n\nFeatures:\n• KVM hardware acceleration (Intel VT-x / AMD-V)\n• UEFI (OVMF) and Legacy BIOS\n• Primary + optional secondary QCOW2 disk\n• Secondary ISO slot (VirtIO drivers, rescue ISO, etc.)\n• VirtIO disk, VirtIO network, sound, USB 3.0\n• Memory ballooning\n• CPU topology (sockets / cores / threads)\n• CPU limit via cpulimit\n• QEMU Guest Agent\n• noVNC browser-based remote desktop\n• Offline snapshots (bvm-snapshot)\n• Disk resize (bvm-resize)\n• QEMU monitor helper (bvm-monitor)\n\n© 2026 blackredit – github.com/blackredit/blackvm",
+  "description": "BlackVM – Run full KVM/QEMU virtual machines on Pterodactyl.\n\nThe Docker image (ghcr.io/blackredit/blackvm) already contains:\n• QEMU system x86_64\n• OVMF (UEFI firmware)\n• Legacy BIOS\n• netboot.xyz ISO (network installer)\n• VirtIO-Win ISO (Windows drivers)\n• noVNC browser remote desktop\n• All helper scripts (bvm-snapshot, bvm-resize, bvm-monitor, bvm-status)\n\nThe installation script ONLY creates the disk image and VNC password file.\n\nFeatures:\n• KVM hardware acceleration (Intel VT-x / AMD-V)\n• UEFI (OVMF) and Legacy BIOS\n• Primary + optional secondary QCOW2 disk\n• Secondary ISO slot (VirtIO drivers, rescue ISO, etc.)\n• VirtIO disk, VirtIO network, sound, USB 3.0\n• Memory ballooning\n• CPU topology (sockets / cores / threads)\n• CPU limit via cpulimit\n• QEMU Guest Agent\n• noVNC browser-based remote desktop\n• Offline snapshots (bvm-snapshot)\n• Disk resize (bvm-resize)\n• QEMU monitor helper (bvm-monitor)\n\n© 2026 blackredit – github.com/blackredit/blackvm\n\nNote: The noVNC port is the primary Pterodactyl allocation port (SERVER_PORT – set automatically by Wings, no variable needed).",
   "features": null,
   "docker_images": {
     "ghcr.io/blackredit/blackvm:latest": "ghcr.io/blackredit/blackvm:latest"
@@ -28,16 +28,6 @@
     }
   },
   "variables": [
-    {
-      "name": "noVNC Web Port",
-      "description": "Port for the noVNC browser interface. Must match an allocated port in Pterodactyl.",
-      "env_variable": "SERVER_PORT",
-      "default_value": "8080",
-      "user_viewable": true,
-      "user_editable": false,
-      "rules": "required|numeric|between:1,65535",
-      "field_type": "text"
-    },
     {
       "name": "VNC Password",
       "description": "Password for VNC / noVNC access. Change before first use!",
@@ -286,6 +276,66 @@
       "user_viewable": true,
       "user_editable": true,
       "rules": "nullable|string|max:1024",
+      "field_type": "text"
+    },
+    {
+      "name": "RTC Basis",
+      "description": "Echtzeituhr-Basis der VM: 'utc' (empfohlen für Linux) oder 'localtime' (für Windows).",
+      "env_variable": "RTC_BASE",
+      "default_value": "utc",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|in:utc,localtime",
+      "field_type": "text"
+    },
+    {
+      "name": "Boot-Reihenfolge",
+      "description": "QEMU Boot-Reihenfolge: 'dc' = DVD dann Disk (Standard), 'cd' = Disk dann DVD, 'c' = nur Disk.",
+      "env_variable": "BOOT_ORDER",
+      "default_value": "dc",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:8",
+      "field_type": "text"
+    },
+    {
+      "name": "Monitor Socket aktivieren",
+      "description": "1 = QEMU Monitor Socket unter MONITOR_SOCKET anlegen (für bvm-monitor). 0 = Monitor auf stdio (Standard).",
+      "env_variable": "ENABLE_MONITOR_SOCKET",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|in:0,1",
+      "field_type": "text"
+    },
+    {
+      "name": "Monitor Socket Pfad",
+      "description": "Pfad des QEMU Monitor Unix-Sockets (nur wenn ENABLE_MONITOR_SOCKET=1).",
+      "env_variable": "MONITOR_SOCKET",
+      "default_value": "/tmp/blackvm.sock",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:255",
+      "field_type": "text"
+    },
+    {
+      "name": "QMP Socket aktivieren",
+      "description": "1 = QMP (QEMU Machine Protocol) Socket für externe Automatisierung anlegen.",
+      "env_variable": "ENABLE_QMP",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|in:0,1",
+      "field_type": "text"
+    },
+    {
+      "name": "QMP Socket Pfad",
+      "description": "Pfad des QMP Unix-Sockets (nur wenn ENABLE_QMP=1).",
+      "env_variable": "QMP_SOCKET",
+      "default_value": "/tmp/blackvm-qmp.sock",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:255",
       "field_type": "text"
     }
   ]

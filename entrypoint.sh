@@ -92,7 +92,17 @@ copy_asset /opt/blackvm/firmware/bios.bin   /home/container/bios.bin          "L
 copy_asset /opt/blackvm/iso/netboot.xyz.iso /home/container/netboot.xyz.iso   "netboot.xyz ISO"
 
 if [ "${SECONDARY_ISO}" = "virtio-win.iso" ] && [ ! -f /home/container/virtio-win.iso ]; then
-    copy_asset /opt/blackvm/iso/virtio-win.iso /home/container/virtio-win.iso "VirtIO-Win ISO"
+    # virtio-win is not baked into the image (it's ~500 MB).
+    # Download it once on first use; subsequent starts find it already present.
+    info "Downloading VirtIO-Win ISO (~500 MB, first-run only)..."
+    VIRTIO_URL="https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
+    if wget -q --show-progress --tries=3 --timeout=60             -O /home/container/virtio-win.iso "${VIRTIO_URL}"; then
+        chmod 666 /home/container/virtio-win.iso
+        ok "VirtIO-Win ISO downloaded"
+    else
+        warn "VirtIO-Win download failed – secondary ISO will be skipped"
+        rm -f /home/container/virtio-win.iso
+    fi
 fi
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
