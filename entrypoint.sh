@@ -127,6 +127,14 @@ if [ "${USE_KVM}" = "1" ]; then
     fi
 fi
 
+info "Checking KVM access..."
+
+if [ -e /dev/kvm ]; then
+    ls -l /dev/kvm
+else
+    warn "/dev/kvm device node missing"
+fi
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  4. Build QEMU command  (array → no quoting issues)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -135,9 +143,11 @@ QEMU+=( qemu-system-x86_64 )
 
 # ── Machine & acceleration ───────────────────────────────────────────────────
 if [ "${USE_KVM}" = "1" ]; then
-    QEMU+=( -enable-kvm -machine "${MACHINE_TYPE},accel=kvm" -cpu host )
+    QEMU+=( -enable-kvm
+            -machine "${MACHINE_TYPE}"
+            -cpu host )
 else
-    QEMU+=( -machine "${MACHINE_TYPE},accel=tcg"
+    QEMU+=( -machine "${MACHINE_TYPE}"
             -cpu max
             -accel tcg,thread=multi,tb-size=128,split-wx=on )
 fi
