@@ -15,7 +15,7 @@
 │                                                                  │
 │  docker-publish.yml  →  builds Docker image                      │
 │                         downloads OVMF + bios + ISOs ONCE        │
-│                         pushes to ghcr.io/blackredit/blackvm    │
+│                         pushes to ghcr.io/blackredit/BlackKVM    │
 │                                                                  │
 │  release-wings.yml   →  publishes Wings binary as GitHub Release │
 └─────────────────────────────────────────────────────────────────┘
@@ -84,7 +84,7 @@
 
 ### 1 — Install the patched Wings binary
 
-Download from the [latest Wings release](https://github.com/blackredit/blackvm/releases/tag/wings-latest):
+Download from the [latest Wings release](https://github.com/blackredit/BlackKVM/releases/tag/wings-latest):
 
 ```bash
 cd /opt/pterodactyl
@@ -92,7 +92,7 @@ systemctl stop wings
 rm -f wings
 curl -fsSL \
   -o wings \
-  https://github.com/blackredit/blackvm/releases/download/wings-latest/wings
+  https://github.com/blackredit/BlackKVM/releases/download/wings-latest/wings
 chmod +x wings
 ```
 
@@ -228,4 +228,4 @@ bvm-status
 
 ---
 
-© 2026 **blackredit** — [github.com/blackredit/blackvm](https://github.com/blackredit/blackvm)
+© 2026 **blackredit** — [github.com/blackredit/BlackKVM](https://github.com/blackredit/BlackKVM)
